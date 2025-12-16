@@ -12,3 +12,13 @@ export const ENV = {
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
     CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME
 }
+
+
+const requiredInProduction = ['CLERK_SECRET_KEY', 'CLERK_PUBLISHABLE_KEY'];
+if (ENV.NODE_ENV === 'production') {
+    for (const key of requiredInProduction) {
+        if (!ENV[key]) {
+            throw new Error(`Missing required environment variable: ${key}`);
+        }
+    }
+}
