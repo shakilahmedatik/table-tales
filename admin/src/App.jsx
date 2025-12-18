@@ -8,9 +8,8 @@ import {
 const App = () => {
   return (
     <>
-      <h1>Welcome to admin panel</h1>
-
       <header>
+        <h1>Welcome to admin panel</h1>
         <SignedOut>
           <SignInButton mode="modal" />
         </SignedOut>
