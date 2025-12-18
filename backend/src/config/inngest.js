@@ -1,5 +1,4 @@
 import { Inngest } from "inngest";
-import { connectDB } from "./db.js";
 import { User } from "../models/user.model.js";
 
 export const inngest = new Inngest({
@@ -28,6 +27,14 @@ const syncUser = inngest.createFunction(
       });
       return user;
     } catch (error) {
+      // Handle duplicate key error (user already exists)
+      if (error.code === 11000 || error.message.includes("duplicate")) {
+        console.log(
+          `User with clerkId ${event.data.id} already exists, fetching existing user`
+        );
+        const existingUser = await User.findOne({ clerkId: event.data.id });
+        return existingUser;
+      }
       console.error("Error syncing user:", error);
       throw error; // Re-throw to let Inngest handle retries
     }
@@ -41,6 +48,9 @@ const deleteUserFromDB = inngest.createFunction(
     try {
       const { id } = event.data;
       const user = await User.findOneAndDelete({ clerkId: id });
+      if (!user) {
+        console.warn(`User with clerkId ${id} not found for deletion`);
+      }
       return user;
     } catch (error) {
       console.error("Error deleting user:", error);
