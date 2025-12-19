@@ -1,17 +1,19 @@
 import { v2 as cloudinary } from 'cloudinary'
-import { ENV } from './env.js';
+import { ENV } from './env.js'
 
-
-if (!ENV.CLOUDINARY_CLOUD_NAME || !ENV.CLOUDINARY_API_KEY || !ENV.CLOUDINARY_API_SECRET) {
-  console.warn("⚠️ Cloudinary credentials not fully configured");
+if (
+  !ENV.CLOUDINARY_CLOUD_NAME ||
+  !ENV.CLOUDINARY_API_KEY ||
+  !ENV.CLOUDINARY_API_SECRET
+) {
+  console.warn('⚠️ Cloudinary credentials not fully configured')
 }
 
-cloudinary.config({ 
-  cloud_name: ENV.CLOUDINARY_CLOUD_NAME, 
-  api_key: ENV.CLOUDINARY_API_KEY, 
+cloudinary.config({
+  cloud_name: ENV.CLOUDINARY_CLOUD_NAME,
+  api_key: ENV.CLOUDINARY_API_KEY,
   api_secret: ENV.CLOUDINARY_API_SECRET,
-  secure: true
-});
+  secure: true,
+})
 
-
- export default cloudinary;
+export default cloudinary
