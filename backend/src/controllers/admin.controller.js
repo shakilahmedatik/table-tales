@@ -78,6 +78,17 @@ export const updateProduct = async (req, res) => {
         return res.status(400).json({ message: 'Maximum 3 images allowed' })
       }
 
+      // Delete old images from Cloudinary before uploading new ones
+      if (product.images && product.images.length > 0) {
+        const deletePromises = product.images.map((imageUrl) => {
+          const publicId = imageUrl.match(/\/products\/([^/.]+)/)?.[1]
+          if (publicId) {
+            return cloudinary.uploader.destroy(`products/${publicId}`)
+          }
+        })
+        await Promise.all(deletePromises.filter(Boolean))
+      }
+
       const uploadPromises = req.files.map((file) => {
         return cloudinary.uploader.upload(file.path, {
           folder: 'products',
@@ -198,9 +209,10 @@ export const deleteProduct = async (req, res) => {
     if (product.images && product.images.length > 0) {
       const deletePromises = product.images.map((imageUrl) => {
         // Extract public_id from URL (assumes format: .../products/publicId.ext)
-        const publicId =
-          'products/' + imageUrl.split('/products/')[1]?.split('.')[0]
-        if (publicId) return cloudinary.uploader.destroy(publicId)
+        const publicId = imageUrl.match(/\/products\/([^/.]+)/)?.[1]
+        if (publicId) {
+          return cloudinary.uploader.destroy(`products/${publicId}`)
+        }
       })
       await Promise.all(deletePromises.filter(Boolean))
     }
