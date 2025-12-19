@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose'
 
 const addressSchema = new mongoose.Schema({
   label: {
@@ -33,7 +33,7 @@ const addressSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-});
+})
 
 const userSchema = new mongoose.Schema(
   {
@@ -48,7 +48,7 @@ const userSchema = new mongoose.Schema(
     },
     imageUrl: {
       type: String,
-      default: "",
+      default: '',
     },
     clerkId: {
       type: String,
@@ -56,11 +56,11 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     addresses: [addressSchema],
-    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   },
   {
     timestamps: true,
   }
-);
+)
 
-export const User = mongoose.model("User", userSchema);
+export const User = mongoose.model('User', userSchema)
