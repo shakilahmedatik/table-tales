@@ -88,13 +88,15 @@ export const updateAddress = async (req, res) => {
       })
     }
 
-    address.label = label || address.label
-    address.fullName = fullName || address.fullName
-    address.streetAddress = streetAddress || address.streetAddress
-    address.city = city || address.city
-    address.state = state || address.state
-    address.zipCode = zipCode || address.zipCode
-    address.phoneNumber = phoneNumber || address.phoneNumber
+    address.label = label !== undefined ? label : address.label
+    address.fullName = fullName !== undefined ? fullName : address.fullName
+    address.streetAddress =
+      streetAddress !== undefined ? streetAddress : address.streetAddress
+    address.city = city !== undefined ? city : address.city
+    address.state = state !== undefined ? state : address.state
+    address.zipCode = zipCode !== undefined ? zipCode : address.zipCode
+    address.phoneNumber =
+      phoneNumber !== undefined ? phoneNumber : address.phoneNumber
     address.isDefault = isDefault !== undefined ? isDefault : address.isDefault
 
     await user.save()
@@ -133,7 +135,7 @@ export const addToWishlist = async (req, res) => {
     const user = req.user
 
     // check if product is already in the wishlist
-    if (user.wishlist.includes(productId)) {
+    if (user.wishlist.some((id) => id.toString() === productId)) {
       return res.status(400).json({ error: 'Product already in wishlist' })
     }
 
@@ -155,7 +157,7 @@ export const removeFromWishlist = async (req, res) => {
     const user = req.user
 
     // check if product is already in the wishlist
-    if (!user.wishlist.includes(productId)) {
+    if (!user.wishlist.some((id) => id.toString() === productId)) {
       return res.status(400).json({ error: 'Product not found in wishlist' })
     }
 
