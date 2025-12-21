@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { Cart } from '../models/cart.model.js'
 import { Product } from '../models/product.model.js'
 
@@ -25,25 +26,33 @@ export const getCart = async (req, res) => {
 }
 
 export const addToCart = async (req, res) => {
+  const session = await mongoose.startSession()
+  session.startTransaction()
   try {
     const { productId, quantity = 1 } = req.body
+    const qty = parseInt(quantity)
 
-    // validate product exists and has stock
-    const product = await Product.findById(productId)
+    // validate product exists and has stock, atomically decrement
+    const product = await Product.findOneAndUpdate(
+      { _id: productId, stock: { $gte: qty } },
+      { $inc: { stock: -qty } },
+      { session, new: true }
+    )
+
     if (!product) {
-      return res.status(404).json({ error: 'Product not found' })
+      await session.abortTransaction()
+      return res
+        .status(400)
+        .json({ error: 'Insufficient stock or product not found' })
     }
 
-    if (product.stock < quantity) {
-      return res.status(400).json({ error: 'Insufficient stock' })
-    }
-
-    let cart = await Cart.findOne({ clerkId: req.user.clerkId })
+    let cart = await Cart.findOne({ clerkId: req.user.clerkId }).session(
+      session
+    )
 
     if (!cart) {
       const user = req.user
-
-      cart = await Cart.create({
+      cart = new Cart({
         user: user._id,
         clerkId: user.clerkId,
         items: [],
@@ -55,37 +64,44 @@ export const addToCart = async (req, res) => {
       (item) => item.product.toString() === productId
     )
     if (existingItem) {
-      // increment quantity by 1
-      const newQuantity = existingItem.quantity + parseInt(quantity)
-      if (product.stock < newQuantity) {
-        return res.status(400).json({ error: 'Insufficient stock' })
-      }
-      existingItem.quantity = newQuantity
+      // increase quantity
+      existingItem.quantity += qty
     } else {
       // add new item
-      cart.items.push({ product: productId, quantity: parseInt(quantity) })
+      cart.items.push({ product: productId, quantity: qty })
     }
 
-    await cart.save()
+    await cart.save({ session })
+    await session.commitTransaction()
 
     res.status(200).json({ message: 'Item added to cart', cart })
   } catch (error) {
+    await session.abortTransaction()
     console.error('Error in addToCart controller:', error)
     res.status(500).json({ error: 'Internal server error' })
+  } finally {
+    session.endSession()
   }
 }
 
 export const updateCartItem = async (req, res) => {
+  const session = await mongoose.startSession()
+  session.startTransaction()
   try {
     const { productId } = req.params
     const { quantity } = req.body
+    const newQty = parseInt(quantity)
 
-    if (parseInt(quantity) < 1) {
+    if (newQty < 1) {
+      await session.abortTransaction()
       return res.status(400).json({ error: 'Quantity must be at least 1' })
     }
 
-    const cart = await Cart.findOne({ clerkId: req.user.clerkId })
+    const cart = await Cart.findOne({ clerkId: req.user.clerkId }).session(
+      session
+    )
     if (!cart) {
+      await session.abortTransaction()
       return res.status(404).json({ error: 'Cart not found' })
     }
 
@@ -93,26 +109,44 @@ export const updateCartItem = async (req, res) => {
       (item) => item.product.toString() === productId
     )
     if (itemIndex === -1) {
+      await session.abortTransaction()
       return res.status(404).json({ error: 'Item not found in cart' })
     }
 
-    // check if product exists & validate stock
-    const product = await Product.findById(productId)
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' })
+    const oldQty = cart.items[itemIndex].quantity
+    const diff = newQty - oldQty
+
+    if (diff > 0) {
+      // Need more stock
+      const product = await Product.findOneAndUpdate(
+        { _id: productId, stock: { $gte: diff } },
+        { $inc: { stock: -diff } },
+        { session, new: true }
+      )
+      if (!product) {
+        await session.abortTransaction()
+        return res.status(400).json({ error: 'Insufficient stock' })
+      }
+    } else if (diff < 0) {
+      // Return stock
+      await Product.findByIdAndUpdate(
+        productId,
+        { $inc: { stock: Math.abs(diff) } },
+        { session }
+      )
     }
 
-    if (product.stock < parseInt(quantity)) {
-      return res.status(400).json({ error: 'Insufficient stock' })
-    }
-
-    cart.items[itemIndex].quantity = parseInt(quantity)
-    await cart.save()
+    cart.items[itemIndex].quantity = newQty
+    await cart.save({ session })
+    await session.commitTransaction()
 
     res.status(200).json({ message: 'Cart updated successfully', cart })
   } catch (error) {
+    await session.abortTransaction()
     console.error('Error in updateCartItem controller:', error)
     res.status(500).json({ error: 'Internal server error' })
+  } finally {
+    session.endSession()
   }
 }
 
