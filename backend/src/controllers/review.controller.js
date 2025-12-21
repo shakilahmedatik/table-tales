@@ -48,14 +48,6 @@ export const createReview = async (req, res) => {
 
     // update the product rating with atomic aggregation
     const reviews = await Review.find({ productId })
-    if (!reviews) {
-      return res.status(404).json({ error: 'Product not found' })
-    }
-    if (reviews.length === 0) {
-      return res
-        .status(404)
-        .json({ error: 'No reviews found for this product' })
-    }
 
     const totalRating = reviews.reduce((sum, rev) => sum + rev.rating, 0)
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -100,14 +92,7 @@ export const deleteReview = async (req, res) => {
     await Review.findByIdAndDelete(reviewId)
 
     const reviews = await Review.find({ productId })
-    if (!reviews) {
-      return res.status(404).json({ error: 'Product not found' })
-    }
-    if (reviews.length === 0) {
-      return res
-        .status(404)
-        .json({ error: 'No reviews found for this product' })
-    }
+
     const totalRating = reviews.reduce((sum, rev) => sum + rev.rating, 0)
     await Product.findByIdAndUpdate(productId, {
       averageRating: reviews.length > 0 ? totalRating / reviews.length : 0,
