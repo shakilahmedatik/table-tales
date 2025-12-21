@@ -12,12 +12,18 @@ export const ENV = {
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
   ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+  CLIENT_URL: process.env.CLIENT_URL,
 }
 
 const requiredInProduction = [
   'CLERK_SECRET_KEY',
   'CLERK_PUBLISHABLE_KEY',
   'ADMIN_EMAIL',
+  'CLIENT_URL',
+  'INNGEST_SIGNING_KEY',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
+  'CLOUDINARY_CLOUD_NAME',
 ]
 if (ENV.NODE_ENV === 'production') {
   for (const key of requiredInProduction) {
