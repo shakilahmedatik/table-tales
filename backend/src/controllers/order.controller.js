@@ -3,46 +3,77 @@ import { Product } from '../models/product.model.js'
 import { Review } from '../models/review.model.js'
 
 export const createOrder = async (req, res) => {
+  const session = await Product.startSession()
+  session.startTransaction()
   try {
     const user = req.user
     const { orderItems, shippingAddress, paymentResult, totalPrice } = req.body
 
     if (!orderItems || orderItems.length === 0) {
+      await session.abortTransaction()
+      session.endSession()
       return res.status(400).json({ error: 'No order items' })
     }
 
     // validate products and stock
     for (const item of orderItems) {
-      const product = await Product.findById(item.product._id)
+      if (!item.product || !item.product._id) {
+        await session.abortTransaction()
+        session.endSession()
+        return res.status(400).json({ error: 'Invalid order item structure' })
+      }
+      const product = await Product.findById(item.product._id).session(session)
       if (!product) {
-        return res.status(404).json({ error: `Product ${item.name} not found` })
+        await session.abortTransaction()
+        session.endSession()
+        return res.status(400).json({
+          error: `Product not found or insufficient stock for ${
+            item.product.name || 'item'
+          }`,
+        })
       }
       if (product.stock < item.quantity) {
-        return res
-          .status(400)
-          .json({ error: `Insufficient stock for ${product.name}` })
+        await session.abortTransaction()
+        session.endSession()
+        return res.status(400).json({
+          error: `Insufficient stock for ${product.name}`,
+        })
       }
     }
 
-    const order = await Order.create({
-      user: user._id,
-      clerkId: user.clerkId,
-      orderItems,
-      shippingAddress,
-      paymentResult,
-      totalPrice,
-    })
+    const order = await Order.create(
+      [
+        {
+          user: user._id,
+          clerkId: user.clerkId,
+          orderItems,
+          shippingAddress,
+          paymentResult,
+          totalPrice,
+        },
+      ],
+      { session }
+    )
 
     // update product stock
     for (const item of orderItems) {
-      await Product.findByIdAndUpdate(item.product._id, {
-        $inc: { stock: -item.quantity },
-      })
+      await Product.findByIdAndUpdate(
+        item.product._id,
+        {
+          $inc: { stock: -item.quantity },
+        },
+        { session }
+      )
     }
+
+    await session.commitTransaction()
+    session.endSession()
 
     res.status(201).json({ message: 'Order created successfully', order })
   } catch (error) {
     console.error('Error in createOrder controller:', error)
+    await session.abortTransaction()
+    session.endSession()
     res.status(500).json({ error: 'Internal server error' })
   }
 }
