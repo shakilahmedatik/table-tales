@@ -166,9 +166,27 @@ export const removeFromCart = async (req, res) => {
   try {
     const { productId } = req.params
 
-    const cart = await Cart.findOne({ clerkId: req.user.clerkId })
+    const cart = await Cart.findOne({ clerkId: req.user.clerkId }).session(
+      session
+    )
     if (!cart) {
+      await session.abortTransaction()
+      session.endSession()
       return res.status(404).json({ error: 'Cart not found' })
+    }
+
+    // Find the item to return stock
+    const item = cart.items.find(
+      (item) => item.product.toString() === productId
+    )
+
+    if (item) {
+      // Return stock to product
+      await Product.findByIdAndUpdate(
+        productId,
+        { $inc: { stock: item.quantity } },
+        { session }
+      )
     }
 
     cart.items = cart.items.filter(
