@@ -16,6 +16,8 @@ export const getCart = async (req, res) => {
         clerkId: user.clerkId,
         items: [],
       })
+      // Populate to match the format of fetched carts
+      cart = await cart.populate('items.product')
     }
 
     res.status(200).json({ cart })
@@ -28,8 +30,16 @@ export const getCart = async (req, res) => {
 export const addToCart = async (req, res) => {
   const session = await mongoose.startSession()
   session.startTransaction()
+  const { productId } = req.params
+
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    await session.abortTransaction()
+    session.endSession()
+    return res.status(400).json({ error: 'Invalid product ID' })
+  }
+
+  const { quantity } = req.body
   try {
-    const { productId, quantity = 1 } = req.body
     const qty = parseInt(quantity)
 
     // validate product exists and has stock, atomically decrement
@@ -92,7 +102,7 @@ export const updateCartItem = async (req, res) => {
     const { quantity } = req.body
     const newQty = parseInt(quantity)
 
-    if (newQty < 1) {
+    if (isNaN(newQty) || newQty < 1) {
       await session.abortTransaction()
       return res.status(400).json({ error: 'Quantity must be at least 1' })
     }
@@ -151,6 +161,8 @@ export const updateCartItem = async (req, res) => {
 }
 
 export const removeFromCart = async (req, res) => {
+  const session = await mongoose.startSession()
+  session.startTransaction()
   try {
     const { productId } = req.params
 
@@ -162,28 +174,51 @@ export const removeFromCart = async (req, res) => {
     cart.items = cart.items.filter(
       (item) => item.product.toString() !== productId
     )
-    await cart.save()
+    await cart.save({ session })
+    await session.commitTransaction()
 
     res.status(200).json({ message: 'Item removed from cart', cart })
   } catch (error) {
+    await session.abortTransaction()
     console.error('Error in removeFromCart controller:', error)
     res.status(500).json({ error: 'Internal server error' })
+  } finally {
+    session.endSession()
   }
 }
 
 export const clearCart = async (req, res) => {
+  const session = await mongoose.startSession()
+  session.startTransaction()
   try {
-    const cart = await Cart.findOne({ clerkId: req.user.clerkId })
+    const cart = await Cart.findOne({ clerkId: req.user.clerkId }).session(
+      session
+    )
+
     if (!cart) {
+      await session.abortTransaction()
       return res.status(404).json({ error: 'Cart not found' })
     }
 
+    // Return stock for all items in the cart
+    for (const item of cart.items) {
+      await Product.findByIdAndUpdate(
+        item.product,
+        { $inc: { stock: item.quantity } },
+        { session }
+      )
+    }
+
     cart.items = []
-    await cart.save()
+    await cart.save({ session })
+    await session.commitTransaction()
 
     res.status(200).json({ message: 'Cart cleared', cart })
   } catch (error) {
+    await session.abortTransaction()
     console.error('Error in clearCart controller:', error)
     res.status(500).json({ error: 'Internal server error' })
+  } finally {
+    session.endSession()
   }
 }
