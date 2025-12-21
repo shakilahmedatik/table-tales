@@ -8,6 +8,8 @@ import { functions, inngest } from './config/inngest.js'
 import adminRoutes from './routes/admin.route.js'
 import userRoutes from './routes/user.route.js'
 import orderRoutes from './routes/order.route.js'
+import productRoutes from './routes/product.route.js'
+import reviewRoutes from './routes/review.route.js'
 
 const app = express()
 app.use(express.json())
@@ -18,6 +20,8 @@ app.use('/api/inngest', serve({ client: inngest, functions }))
 app.use('/api/admin', adminRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/orders', orderRoutes)
+app.use('/api/products', productRoutes)
+app.use('/api/reviews', reviewRoutes)
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({ message: 'OK' })

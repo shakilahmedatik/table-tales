@@ -1,12 +1,11 @@
 import { Router } from 'express'
-
-import { createOrder, getUserOrders } from '../controllers/order.controller.js'
+import { createReview, deleteReview } from '../controllers/review.controller.js'
 import { protectedRoute } from '../middlewares/auth.middleware.js'
 
 const router = Router()
 router.use(protectedRoute)
 
-router.post('/', createOrder)
-router.get('/', getUserOrders)
+router.post('/', createReview)
+router.delete('/:reviewId', deleteReview)
 
 export default router
