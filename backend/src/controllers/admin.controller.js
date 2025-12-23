@@ -113,6 +113,7 @@ export const getAllOrders = async (_, res) => {
       .populate('user', 'name email')
       .populate('orderItems.product')
       .sort({ createdAt: -1 })
+      .limit(5)
 
     res.status(200).json({ orders })
   } catch (error) {
