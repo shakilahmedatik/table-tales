@@ -20,7 +20,7 @@
         },
         {
             "src": "/(.*)",
-            "dest": "/admin/index.html"
+            "dest": "/admin/dist/index.html"
         }
     ]
 }
