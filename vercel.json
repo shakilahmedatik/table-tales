@@ -21,7 +21,7 @@
         { "handle": "filesystem" },
         {
             "src": "/(.*)",
-            "dest": "/index.html"
+            "dest": "/admin/dist/index.html"
         }
     ]
 }
