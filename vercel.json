@@ -18,10 +18,18 @@
       "src": "/api/(.*)",
       "dest": "/backend/src/server.js"
     },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/admin/assets/$1"
+    },
+    {
+      "src": "/vite.svg",
+      "dest": "/admin/vite.svg"
+    },
     { "handle": "filesystem" },
     {
       "src": "/(.*)",
-      "dest": "/admin/dist/index.html"
+      "dest": "/admin/index.html"
     }
   ]
 }
