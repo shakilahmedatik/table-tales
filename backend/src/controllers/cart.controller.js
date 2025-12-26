@@ -30,18 +30,17 @@ export const getCart = async (req, res) => {
 export const addToCart = async (req, res) => {
   const session = await mongoose.startSession()
   session.startTransaction()
-  const { productId } = req.params
-
+  const { quantity, productId } = req.body
   if (!mongoose.Types.ObjectId.isValid(productId)) {
-    await session.abortTransaction()
     session.endSession()
     return res.status(400).json({ error: 'Invalid product ID' })
   }
-
-  const { quantity } = req.body
+  const qty = parseInt(quantity)
+  if (isNaN(qty) || qty < 1) {
+    session.endSession()
+    return res.status(400).json({ error: 'Quantity must be at least 1' })
+  }
   try {
-    const qty = parseInt(quantity)
-
     // validate product exists and has stock, atomically decrement
     const product = await Product.findOneAndUpdate(
       { _id: productId, stock: { $gte: qty } },
@@ -51,6 +50,7 @@ export const addToCart = async (req, res) => {
 
     if (!product) {
       await session.abortTransaction()
+      session.endSession()
       return res
         .status(400)
         .json({ error: 'Insufficient stock or product not found' })
@@ -71,7 +71,7 @@ export const addToCart = async (req, res) => {
 
     // check if item already in the cart
     const existingItem = cart.items.find(
-      (item) => item.product.toString() === productId
+      item => item.product.toString() === productId
     )
     if (existingItem) {
       // increase quantity
@@ -97,13 +97,17 @@ export const addToCart = async (req, res) => {
 export const updateCartItem = async (req, res) => {
   const session = await mongoose.startSession()
   session.startTransaction()
+  const { productId } = req.params
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    session.endSession()
+    return res.status(400).json({ error: 'Invalid product ID' })
+  }
   try {
-    const { productId } = req.params
     const { quantity } = req.body
     const newQty = parseInt(quantity)
 
     if (isNaN(newQty) || newQty < 1) {
-      await session.abortTransaction()
+      session.endSession()
       return res.status(400).json({ error: 'Quantity must be at least 1' })
     }
 
@@ -112,14 +116,16 @@ export const updateCartItem = async (req, res) => {
     )
     if (!cart) {
       await session.abortTransaction()
+      session.endSession()
       return res.status(404).json({ error: 'Cart not found' })
     }
 
     const itemIndex = cart.items.findIndex(
-      (item) => item.product.toString() === productId
+      item => item.product.toString() === productId
     )
     if (itemIndex === -1) {
       await session.abortTransaction()
+      session.endSession()
       return res.status(404).json({ error: 'Item not found in cart' })
     }
 
@@ -135,6 +141,7 @@ export const updateCartItem = async (req, res) => {
       )
       if (!product) {
         await session.abortTransaction()
+        session.endSession()
         return res.status(400).json({ error: 'Insufficient stock' })
       }
     } else if (diff < 0) {
@@ -165,6 +172,10 @@ export const removeFromCart = async (req, res) => {
   session.startTransaction()
   try {
     const { productId } = req.params
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      session.endSession()
+      return res.status(400).json({ error: 'Invalid product ID' })
+    }
 
     const cart = await Cart.findOne({ clerkId: req.user.clerkId }).session(
       session
@@ -176,21 +187,24 @@ export const removeFromCart = async (req, res) => {
     }
 
     // Find the item to return stock
-    const item = cart.items.find(
-      (item) => item.product.toString() === productId
-    )
+    const item = cart.items.find(item => item.product.toString() === productId)
 
     if (item) {
       // Return stock to product
-      await Product.findByIdAndUpdate(
+      const product = await Product.findByIdAndUpdate(
         productId,
         { $inc: { stock: item.quantity } },
         { session }
       )
+      if (!product) {
+        await session.abortTransaction()
+        session.endSession()
+        return res.status(400).json({ error: 'Product not found' })
+      }
     }
 
     cart.items = cart.items.filter(
-      (item) => item.product.toString() !== productId
+      item => item.product.toString() !== productId
     )
     await cart.save({ session })
     await session.commitTransaction()
@@ -215,6 +229,7 @@ export const clearCart = async (req, res) => {
 
     if (!cart) {
       await session.abortTransaction()
+      session.endSession()
       return res.status(404).json({ error: 'Cart not found' })
     }
 
