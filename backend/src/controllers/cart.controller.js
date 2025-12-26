@@ -30,15 +30,13 @@ export const getCart = async (req, res) => {
 export const addToCart = async (req, res) => {
   const session = await mongoose.startSession()
   session.startTransaction()
-  const { productId } = req.params
-
+  const { quantity, productId } = req.body
   if (!mongoose.Types.ObjectId.isValid(productId)) {
     await session.abortTransaction()
     session.endSession()
     return res.status(400).json({ error: 'Invalid product ID' })
   }
 
-  const { quantity } = req.body
   try {
     const qty = parseInt(quantity)
 
@@ -71,7 +69,7 @@ export const addToCart = async (req, res) => {
 
     // check if item already in the cart
     const existingItem = cart.items.find(
-      (item) => item.product.toString() === productId
+      item => item.product.toString() === productId
     )
     if (existingItem) {
       // increase quantity
@@ -97,8 +95,13 @@ export const addToCart = async (req, res) => {
 export const updateCartItem = async (req, res) => {
   const session = await mongoose.startSession()
   session.startTransaction()
+  const { productId } = req.params
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    await session.abortTransaction()
+    session.endSession()
+    return res.status(400).json({ error: 'Invalid product ID' })
+  }
   try {
-    const { productId } = req.params
     const { quantity } = req.body
     const newQty = parseInt(quantity)
 
@@ -116,7 +119,7 @@ export const updateCartItem = async (req, res) => {
     }
 
     const itemIndex = cart.items.findIndex(
-      (item) => item.product.toString() === productId
+      item => item.product.toString() === productId
     )
     if (itemIndex === -1) {
       await session.abortTransaction()
@@ -166,6 +169,12 @@ export const removeFromCart = async (req, res) => {
   try {
     const { productId } = req.params
 
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      await session.abortTransaction()
+      session.endSession()
+      return res.status(400).json({ error: 'Invalid product ID' })
+    }
+
     const cart = await Cart.findOne({ clerkId: req.user.clerkId }).session(
       session
     )
@@ -176,9 +185,7 @@ export const removeFromCart = async (req, res) => {
     }
 
     // Find the item to return stock
-    const item = cart.items.find(
-      (item) => item.product.toString() === productId
-    )
+    const item = cart.items.find(item => item.product.toString() === productId)
 
     if (item) {
       // Return stock to product
@@ -190,7 +197,7 @@ export const removeFromCart = async (req, res) => {
     }
 
     cart.items = cart.items.filter(
-      (item) => item.product.toString() !== productId
+      item => item.product.toString() !== productId
     )
     await cart.save({ session })
     await session.commitTransaction()
