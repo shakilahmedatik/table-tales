@@ -32,14 +32,15 @@ export const addToCart = async (req, res) => {
   session.startTransaction()
   const { quantity, productId } = req.body
   if (!mongoose.Types.ObjectId.isValid(productId)) {
-    await session.abortTransaction()
     session.endSession()
     return res.status(400).json({ error: 'Invalid product ID' })
   }
-
+  const qty = parseInt(quantity)
+  if (isNaN(qty) || qty < 1) {
+    session.endSession()
+    return res.status(400).json({ error: 'Quantity must be at least 1' })
+  }
   try {
-    const qty = parseInt(quantity)
-
     // validate product exists and has stock, atomically decrement
     const product = await Product.findOneAndUpdate(
       { _id: productId, stock: { $gte: qty } },
@@ -98,7 +99,6 @@ export const updateCartItem = async (req, res) => {
   session.startTransaction()
   const { productId } = req.params
   if (!mongoose.Types.ObjectId.isValid(productId)) {
-    await session.abortTransaction()
     session.endSession()
     return res.status(400).json({ error: 'Invalid product ID' })
   }
@@ -107,7 +107,6 @@ export const updateCartItem = async (req, res) => {
     const newQty = parseInt(quantity)
 
     if (isNaN(newQty) || newQty < 1) {
-      await session.abortTransaction()
       session.endSession()
       return res.status(400).json({ error: 'Quantity must be at least 1' })
     }
@@ -173,9 +172,7 @@ export const removeFromCart = async (req, res) => {
   session.startTransaction()
   try {
     const { productId } = req.params
-
     if (!mongoose.Types.ObjectId.isValid(productId)) {
-      await session.abortTransaction()
       session.endSession()
       return res.status(400).json({ error: 'Invalid product ID' })
     }
@@ -194,11 +191,16 @@ export const removeFromCart = async (req, res) => {
 
     if (item) {
       // Return stock to product
-      await Product.findByIdAndUpdate(
+      const product = await Product.findByIdAndUpdate(
         productId,
         { $inc: { stock: item.quantity } },
         { session }
       )
+      if (!product) {
+        await session.abortTransaction()
+        session.endSession()
+        return res.status(400).json({ error: 'Product not found' })
+      }
     }
 
     cart.items = cart.items.filter(

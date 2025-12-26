@@ -13,6 +13,7 @@ const api = axios.create({
   },
 })
 let isInterceptorSet = false
+let interceptorId: number | null = null
 export const useApi = () => {
   const { getToken } = useAuth()
 
@@ -20,7 +21,7 @@ export const useApi = () => {
     if (isInterceptorSet) return
 
     isInterceptorSet = true
-    const interceptor = api.interceptors.request.use(async config => {
+    interceptorId = api.interceptors.request.use(async config => {
       const token = await getToken()
 
       if (token) {
@@ -30,10 +31,11 @@ export const useApi = () => {
       return config
     })
 
-    // cleanup: remove interceptor when component unmounts
-
     return () => {
-      api.interceptors.request.eject(interceptor)
+      if (interceptorId !== null) {
+        api.interceptors.request.eject(interceptorId)
+        interceptorId = null
+      }
       isInterceptorSet = false
     }
   }, [getToken])

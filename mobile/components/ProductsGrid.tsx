@@ -70,7 +70,10 @@ const ProductsGrid = ({ products, isLoading, isError }: ProductsGridProps) => {
           className='absolute top-3 right-3 bg-black/30 backdrop-blur-xl p-2 rounded-full'
           activeOpacity={0.7}
           onPress={() => toggleWishlist(product._id)}
-          disabled={isAddingToWishlist || isRemovingFromWishlist}
+          disabled={
+            (isAddingToWishlist && addVariables === product._id) ||
+            (isRemovingFromWishlist && removeVariables === product._id)
+          }
         >
           {(isAddingToWishlist && addVariables === product._id) ||
           (isRemovingFromWishlist && removeVariables === product._id) ? (
@@ -114,7 +117,9 @@ const ProductsGrid = ({ products, isLoading, isError }: ProductsGridProps) => {
             className='bg-primary rounded-full w-8 h-8 items-center justify-center'
             activeOpacity={0.7}
             onPress={() => handleAddToCart(product._id, product.name)}
-            disabled={isAddingToCart}
+            disabled={
+              isAddingToCart && addCartVariables?.productId === product._id
+            }
           >
             {isAddingToCart && addCartVariables?.productId === product._id ? (
               <ActivityIndicator size='small' color='#121212' />
