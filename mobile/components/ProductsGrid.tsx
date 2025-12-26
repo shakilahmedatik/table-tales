@@ -57,7 +57,11 @@ const ProductsGrid = ({ products, isLoading, isError }: ProductsGridProps) => {
     >
       <View className='relative'>
         <Image
-          source={{ uri: product.images[0] }}
+          source={
+            product.images[0]
+              ? { uri: product.images[0] }
+              : require('../assets/images/auth-image.png')
+          }
           className='w-full h-44 bg-background-lighter'
           resizeMode='cover'
         />
@@ -112,7 +116,7 @@ const ProductsGrid = ({ products, isLoading, isError }: ProductsGridProps) => {
             onPress={() => handleAddToCart(product._id, product.name)}
             disabled={isAddingToCart}
           >
-            {isAddingToCart && addCartVariables === product._id ? (
+            {isAddingToCart && addCartVariables?.productId === product._id ? (
               <ActivityIndicator size='small' color='#121212' />
             ) : (
               <Ionicons name='add' size={18} color='#121212' />

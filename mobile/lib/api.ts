@@ -12,11 +12,14 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 })
-
+let isInterceptorSet = false
 export const useApi = () => {
   const { getToken } = useAuth()
 
   useEffect(() => {
+    if (isInterceptorSet) return
+
+    isInterceptorSet = true
     const interceptor = api.interceptors.request.use(async config => {
       const token = await getToken()
 
@@ -31,6 +34,7 @@ export const useApi = () => {
 
     return () => {
       api.interceptors.request.eject(interceptor)
+      isInterceptorSet = false
     }
   }, [getToken])
 

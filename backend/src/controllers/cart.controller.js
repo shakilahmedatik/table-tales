@@ -49,6 +49,7 @@ export const addToCart = async (req, res) => {
 
     if (!product) {
       await session.abortTransaction()
+      session.endSession()
       return res
         .status(400)
         .json({ error: 'Insufficient stock or product not found' })
@@ -107,6 +108,7 @@ export const updateCartItem = async (req, res) => {
 
     if (isNaN(newQty) || newQty < 1) {
       await session.abortTransaction()
+      session.endSession()
       return res.status(400).json({ error: 'Quantity must be at least 1' })
     }
 
@@ -115,6 +117,7 @@ export const updateCartItem = async (req, res) => {
     )
     if (!cart) {
       await session.abortTransaction()
+      session.endSession()
       return res.status(404).json({ error: 'Cart not found' })
     }
 
@@ -123,6 +126,7 @@ export const updateCartItem = async (req, res) => {
     )
     if (itemIndex === -1) {
       await session.abortTransaction()
+      session.endSession()
       return res.status(404).json({ error: 'Item not found in cart' })
     }
 
@@ -138,6 +142,7 @@ export const updateCartItem = async (req, res) => {
       )
       if (!product) {
         await session.abortTransaction()
+        session.endSession()
         return res.status(400).json({ error: 'Insufficient stock' })
       }
     } else if (diff < 0) {
@@ -222,6 +227,7 @@ export const clearCart = async (req, res) => {
 
     if (!cart) {
       await session.abortTransaction()
+      session.endSession()
       return res.status(404).json({ error: 'Cart not found' })
     }
 

@@ -3,11 +3,13 @@ import { Ionicons } from '@expo/vector-icons'
 import { useAuth } from '@clerk/clerk-expo'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BlurView } from 'expo-blur'
-import { StyleSheet } from 'react-native'
+import { StyleSheet, Dimensions } from 'react-native'
 
 const TabsLayout = () => {
   const { isSignedIn, isLoaded } = useAuth()
   const insets = useSafeAreaInsets()
+  const { width } = Dimensions.get('window')
+  const horizontalMargin = Math.max(16, (width - 280) / 2)
 
   if (!isLoaded) return null // for a better ux
   if (!isSignedIn) return <Redirect href={'/(auth)'} />
@@ -23,7 +25,7 @@ const TabsLayout = () => {
           borderTopWidth: 0,
           height: 32 + insets.bottom,
           paddingTop: 4,
-          marginHorizontal: 100,
+          marginHorizontal: horizontalMargin,
           marginBottom: insets.bottom,
           borderRadius: 24,
           overflow: 'hidden',
