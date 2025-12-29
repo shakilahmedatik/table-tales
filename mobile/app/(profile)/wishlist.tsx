@@ -4,6 +4,7 @@ import useWishlist from '@/hooks/useWishlist'
 import { Ionicons } from '@expo/vector-icons'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
+import { useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -14,15 +15,10 @@ import {
 } from 'react-native'
 
 function WishlistScreen() {
-  const {
-    wishlist,
-    isLoading,
-    isError,
-    removeFromWishlist,
-    isRemovingFromWishlist,
-  } = useWishlist()
+  const { wishlist, isLoading, isError, removeFromWishlist } = useWishlist()
 
-  const { addToCart, isAddingToCart } = useCart()
+  const { addToCart } = useCart()
+  const [processingItems, setProcessingItems] = useState<Set<string>>(new Set())
 
   const handleRemoveFromWishlist = (productId: string, productName: string) => {
     Alert.alert('Remove from wishlist', `Remove ${productName} from wishlist`, [
@@ -31,14 +27,28 @@ function WishlistScreen() {
         text: 'Remove',
         style: 'destructive',
 
-        onPress: () => removeFromWishlist(productId),
+        // onPress: () => removeFromWishlist(productId),
+        onPress: () => {
+          setProcessingItems(prev => new Set(prev).add(productId))
+          removeFromWishlist(productId, {
+            onSettled: () => {
+              setProcessingItems(prev => {
+                const next = new Set(prev)
+                next.delete(productId)
+                return next
+              })
+            },
+          })
+        },
       },
     ])
   }
 
   const handleAddToCart = (productId: string, productName: string) => {
+    setProcessingItems(prev => new Set(prev).add(productId))
     addToCart(
       { productId, quantity: 1 },
+
       {
         onSuccess: () =>
           Alert.alert('Success', `${productName} added to cart!`),
@@ -47,6 +57,13 @@ function WishlistScreen() {
             'Error',
             error?.response?.data?.error || 'Failed to add to cart'
           )
+        },
+        onSettled: () => {
+          setProcessingItems(prev => {
+            const next = new Set(prev)
+            next.delete(productId)
+            return next
+          })
         },
       }
     )
@@ -142,7 +159,7 @@ function WishlistScreen() {
                     onPress={() =>
                       handleRemoveFromWishlist(item._id, item.name)
                     }
-                    disabled={isRemovingFromWishlist}
+                    disabled={processingItems.has(item._id)}
                   >
                     <Ionicons name='trash-outline' size={20} color='#EF4444' />
                   </TouchableOpacity>
@@ -153,9 +170,9 @@ function WishlistScreen() {
                       className='bg-primary rounded-xl py-3 items-center'
                       activeOpacity={0.8}
                       onPress={() => handleAddToCart(item._id, item.name)}
-                      disabled={isAddingToCart}
+                      disabled={processingItems.has(item._id)}
                     >
-                      {isAddingToCart ? (
+                      {processingItems.has(item._id) ? (
                         <ActivityIndicator size='small' color='#121212' />
                       ) : (
                         <Text className='text-background font-bold'>
