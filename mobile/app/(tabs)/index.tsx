@@ -84,7 +84,7 @@ const ShopScreen = () => {
             <TextInput
               placeholder='Search for products'
               placeholderTextColor={'#666'}
-              className='flex-1 ml-3 text-base text-text-primary'
+              className='flex-1 ml-3 text-base text-text-primary  leading-none pt-1'
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
